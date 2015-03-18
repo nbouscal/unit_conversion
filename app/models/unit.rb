@@ -3,17 +3,19 @@ class Unit < ActiveRecord::Base
   class ConversionFactor
     attr_accessor :compound_unit, :multiplication_factor, :linear_shift
 
+    def initialize(cu, mf = 1, ls = 0)
+      @compound_unit = cu
+      @multiplication_factor = mf
+      @linear_shift = ls
+    end
+
     # combine_factors:: ConversionFactor -> ConversionFactor -> ConversionFactor
     def combine_factors (factor2)
-      compound_unit = Unit.simplify(self.compound_unit.concat(factor2.compound_unit))
-      multiplication_factor = self.multiplication_factor * factor2.multiplication_factor
-      linear_shift = self.linear_shift + factor2.linear_shift
+      cu = Unit.simplify(compound_unit + factor2.compound_unit)
+      mf = self.multiplication_factor * factor2.multiplication_factor
+      ls = self.linear_shift + factor2.linear_shift
 
-      new_factor = ConversionFactor.new(
-        compound_unit,
-        multiplication_factor,
-        linear_shift
-      )
+      new_factor = ConversionFactor.new(cu, mf, ls)
 
       return new_factor
     end
@@ -94,7 +96,7 @@ class Unit < ActiveRecord::Base
       print_unit(parse_unit('meters * kg/second * s'))
     end
 
-    private
+    # private
 
     CUnit = Struct.new(:unit, :exponent)
 
@@ -148,7 +150,7 @@ class Unit < ActiveRecord::Base
           u
         end
 
-        units == numerator.concat(denominator)
+        units == numerator + denominator
       end
 
       return units
@@ -165,18 +167,26 @@ class Unit < ActiveRecord::Base
 
       compound_unit = compound_unit.compact.sort_by!(&:unit)
 
-      compound_unit.each do |cunit|
+      compound_unit.each do |u|
         last = simplified_unit.last
         unless last.nil?
-          if last.unit == cunit.unit
-            last.exponent += cunit.exponent
+          if last.unit == u.unit
+            last.exponent += u.exponent
           else
-            simplified_unit << cunit.dup
+            simplified_unit << u.dup
           end
         else
-          simplified_unit << cunit.dup
+          simplified_unit << u.dup
         end
       end
+
+      simplified_unit.map! do |u|
+        if u.exponent == 0
+          nil
+        else
+          u
+        end
+      end.compact!
 
       return simplified_unit
     end
