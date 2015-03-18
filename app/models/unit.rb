@@ -39,8 +39,8 @@ class Unit < ActiveRecord::Base
     #   }
     #
     # data ConversionFactor = ConversionFactor {
-    #     compound_unit :: CompoundUnit -- should contain inverse of the
-    #                                   -- original unit???
+    #     compound_unit :: CompoundUnit
+    #       ^-- should contain inverse of the original unit???
     #   , multiplication_factor :: Rational
     #   , linear_shift :: Rational
     #   }
@@ -91,10 +91,10 @@ class Unit < ActiveRecord::Base
     end
 
     def test
-      parse_unit('meters/second')
+      print_unit(parse_unit('meters * kg/second * s'))
     end
 
-    # private
+    private
 
     CUnit = Struct.new(:unit, :exponent)
 
@@ -107,6 +107,8 @@ class Unit < ActiveRecord::Base
     end
 
     # Unit.tokenize :: String -> [String]
+    # Takes a string unit name and turns it into a list of tokens,
+    # including * and /
     def tokenize(unit_name)
       unit_name = unit_name.gsub('/', ' / ')
       unit_name = unit_name.gsub('*', ' * ')
@@ -115,6 +117,9 @@ class Unit < ActiveRecord::Base
     end
 
     # Unit.parse :: [String] -> CompoundUnit
+    # Takes a list of tokens, including * and /, and turns them into a list of
+    # CUnits containing the appropriate Units. Raises an error if it can't
+    # find one of the units
     def parse(tokens)
       tokens.delete_if { |t| t == '*' } # multiplication is the default
       tokens.map! do |token|
@@ -122,27 +127,43 @@ class Unit < ActiveRecord::Base
         token == 's' ? token : token.singularize
       end
 
-
       division = tokens.index('/')
-      if division.nil?
-        numerator = tokens
-        denominator = []
-      else
-        numerator = tokens[0...division]
-        denominator = tokens[division+1..-1]
+      tokens.delete('/')
+
+      units = tokens.map do |token|
+        unit = Unit.find_by unit_name: token
+        if unit.nil?
+          unit = Unit.where('? = ANY(symbols)', token).first
+        end
+        if unit.nil?
+          raise NoSuchUnit
+        end
+        CUnit.new(unit, 1)
       end
+
+      unless division.nil?
+        numerator = units[0...division]
+        denominator = units[division..-1].map do |u|
+          u.exponent *= -1
+          u
+        end
+
+        units == numerator.concat(denominator)
+      end
+
+      return units
     end
 
     # Unit.simplify :: CompoundUnit -> CompoundUnit
-    # This method will take a compound unit and combine any duplicated units
-    # by combining their exponents. For example, it will convert
+    # Takes a compound unit and combines any duplicated units
+    # by combining their exponents. For example, converts
     # meter*meter/second into meter^2/second.
     def simplify(compound_unit)
       return [] if compound_unit.nil?
 
       simplified_unit = []
 
-      compound_unit.compact!.sort_by!(&:unit)
+      compound_unit = compound_unit.compact.sort_by!(&:unit)
 
       compound_unit.each do |cunit|
         last = simplified_unit.last
@@ -158,6 +179,22 @@ class Unit < ActiveRecord::Base
       end
 
       return simplified_unit
+    end
+
+    # Unit.print_unit :: CompoundUnit -> String
+    def print_unit(compound_unit)
+      compound_unit.reduce('') do |memo, obj|
+        unit = obj.unit.symbols.first
+        exp = obj.exponent
+        if exp.abs > 1
+          unit = unit + '^' + exp.to_s
+        end
+        if memo == ''
+          unit
+        else
+          memo + ' * ' + unit
+        end
+      end
     end
 
   end
