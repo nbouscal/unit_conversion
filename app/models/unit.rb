@@ -1,25 +1,9 @@
 class Unit < ActiveRecord::Base
 
-  class ConversionFactor
-    attr_accessor :compound_unit, :multiplication_factor, :linear_shift
+  has_one :conversion_factor
 
-    def initialize(cu, mf = 1, ls = 0)
-      @compound_unit = cu
-      @multiplication_factor = mf
-      @linear_shift = ls
-    end
-
-    # combine_factors:: ConversionFactor -> ConversionFactor -> ConversionFactor
-    def combine_factors (factor2)
-      cu = Unit.simplify(compound_unit + factor2.compound_unit)
-      mf = self.multiplication_factor * factor2.multiplication_factor
-      ls = self.linear_shift + factor2.linear_shift
-
-      new_factor = ConversionFactor.new(cu, mf, ls)
-
-      return new_factor
-    end
-  end
+  CUnit = Struct.new(:unit, :exponent)
+  Output = Struct.new(:unit_name, :multiplication_factor, :linear_shift, :output_value)
 
   class << self
 
@@ -67,28 +51,32 @@ class Unit < ActiveRecord::Base
     # Unit.to_SI :: (String, InputValue) -> Output
     def to_SI(input_unit_name, input_value = nil)
 
-      # input_units :: CompoundUnit
+      # input_compound_unit :: CompoundUnit
       input_compound_unit = self.parse_unit(input_unit_name)
 
-      # converted_units :: [ConversionFactor]
-      converted_units = input_units.map(&:to_SI)
+      # unit_conversions :: [ConversionFactor]
+      unit_conversions = input_compound_unit.map do |cu|
+        cu.unit.conversion_factor
+      end
 
-      # conversion_factor :: ConversionFactor
-      conversion_factor = converted_units.reduce(:combine_factors)
+      # cf :: ConversionFactor
+      cf = unit_conversions.reduce(:combine_factors)
 
-      #result :: Output
-      result = conversion_factor.convert(input_compound_unit)
 
       case input_value
         when NilClass
-          #
+          output_value = nil
         when Numeric
-          #
+          output_value = cf.convert(input_value)
         when Array
-          #
+          output_value = input_value.map do |iv|
+            cf.convert(iv)
+          end
       end
 
-      return result
+      output = cf.output(output_value)
+
+      return output
 
     end
 
@@ -96,15 +84,12 @@ class Unit < ActiveRecord::Base
       print_unit(parse_unit('meters * kg/second * s'))
     end
 
-    # private
-
-    CUnit = Struct.new(:unit, :exponent)
-
     # Unit.parse_unit :: String -> CompoundUnit
     def parse_unit(unit_name)
       tokens = tokenize(unit_name)
       compound_unit = parse(tokens)
       simplified_unit = simplify(compound_unit)
+      print simplified_unit
       return simplified_unit
     end
 

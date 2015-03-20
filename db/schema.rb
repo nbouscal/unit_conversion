@@ -11,17 +11,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150319183005) do
+ActiveRecord::Schema.define(version: 20150319193717) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "units", force: :cascade do |t|
-    t.string   "unit_name"
-    t.string   "symbols",                        array: true
-    t.datetime "created_at",        null: false
-    t.datetime "updated_at",        null: false
-    t.text     "conversion_factor"
+  create_table "conversion_factors", force: :cascade do |t|
+    t.text     "multiplication_factor", default: "1"
+    t.text     "linear_shift",          default: "0"
+    t.datetime "created_at",                          null: false
+    t.datetime "updated_at",                          null: false
+    t.text     "compound_unit"
+    t.integer  "unit_id"
   end
 
+  add_index "conversion_factors", ["unit_id"], name: "index_conversion_factors_on_unit_id", using: :btree
+
+  create_table "units", force: :cascade do |t|
+    t.string   "unit_name"
+    t.string   "symbols",                 array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_foreign_key "conversion_factors", "units"
 end
