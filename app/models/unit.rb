@@ -65,13 +65,15 @@ class Unit < ActiveRecord::Base
 
 
       case input_value
-        when NilClass
-          output_value = nil
+        when String
+          if (num = Float(input_value) rescue nil)
+            output_value = cf.convert(num)
+          end
         when Numeric
-          output_value = cf.convert(input_value)
+          output_value = cf.convert(input_value.to_f)
         when Array
           output_value = input_value.map do |iv|
-            cf.convert(iv)
+            cf.convert(iv.to_f)
           end
       end
 
@@ -124,7 +126,7 @@ class Unit < ActiveRecord::Base
           unit = Unit.where('? = ANY(symbols)', token).first
         end
         if unit.nil?
-          raise NoSuchUnit
+          raise "No unit found named #{token}."
         end
         CUnit.new(unit, 1)
       end
