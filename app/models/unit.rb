@@ -56,7 +56,8 @@ class Unit < ActiveRecord::Base
 
       # unit_conversions :: [ConversionFactor]
       unit_conversions = input_compound_unit.map do |cu|
-        cu.unit.conversion_factor
+        cf = cu.unit.conversion_factor
+        cf.exponentiate(cu.exponent)
       end
 
       # cf :: ConversionFactor
@@ -89,7 +90,6 @@ class Unit < ActiveRecord::Base
       tokens = tokenize(unit_name)
       compound_unit = parse(tokens)
       simplified_unit = simplify(compound_unit)
-      print simplified_unit
       return simplified_unit
     end
 
@@ -117,6 +117,7 @@ class Unit < ActiveRecord::Base
       division = tokens.index('/')
       tokens.delete('/')
 
+      # units :: [CUnit]
       units = tokens.map do |token|
         unit = Unit.find_by unit_name: token
         if unit.nil?
@@ -181,7 +182,7 @@ class Unit < ActiveRecord::Base
       compound_unit.reduce('') do |memo, obj|
         unit = obj.unit.symbols.first
         exp = obj.exponent
-        if exp.abs > 1
+        if exp != 1
           unit = unit + '^' + exp.to_s
         end
         if memo == ''

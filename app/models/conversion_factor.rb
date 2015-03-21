@@ -2,26 +2,37 @@ class ConversionFactor < ActiveRecord::Base
 
   belongs_to :unit
 
-  # serialize :compound_unit, Marshal
-
-  # def unit
-  #   compound_unit.map { |h| ConversionFactor.cunit_from_hash(h) }
-  # end
-
-  # def unit=
-
-  # end
-
   def unit
-    Marshal.load(self.compound_unit)
+    Marshal.load(Base64.decode64(self.compound_unit))
   end
 
   def unit=(obj)
-    self.compound_unit = Marshal.dump(obj)
+    self.compound_unit = Base64.encode64(Marshal.dump(obj))
+  end
+
+  def exponentiate (exponent)
+    # apply the exponent to the multiplication factor
+    mf = Rational(multiplication_factor)
+    self.multiplication_factor = mf ** exponent
+
+    # apply the exponent to each of the new units
+    new_unit = self.unit.dup
+    new_unit.map! do |cu|
+      cu.exponent *= exponent
+      cu
+    end
+
+    self.unit = new_unit
+    return self
   end
 
   def output (output_value)
-    Unit::Output.new(Unit.print_unit(unit), multiplication_factor, linear_shift, output_value)
+    Unit::Output.new(
+      Unit.print_unit(unit),
+      multiplication_factor,
+      linear_shift,
+      output_value
+    )
   end
 
   # combine_factors :: ConversionFactor -> ConversionFactor -> ConversionFactor
@@ -32,8 +43,11 @@ class ConversionFactor < ActiveRecord::Base
     mf = Rational(multiplication_factor) * Rational(factor2.multiplication_factor)
     ls = Rational(linear_shift) + Rational(factor2.linear_shift)
 
-    new_factor = ConversionFactor.new(multiplication_factor: mf, linear_shift: ls)
-    new_factor.compound_unit = cu
+    new_factor = ConversionFactor.new(
+      multiplication_factor: mf,
+      linear_shift: ls
+    )
+    new_factor.unit = cu
 
     return new_factor
   end
@@ -41,12 +55,6 @@ class ConversionFactor < ActiveRecord::Base
   # convert :: Rational -> Rational
   def convert (input_value)
     Rational(input_value) * Rational(multiplication_factor) + Rational(linear_shift)
-  end
-
-  def self.cunit_from_hash (hash)
-    unit = Unit.find(hash['unit']['id'])
-    exp = hash['exponent']
-    Unit::CUnit.new(unit, exp)
   end
 
 end

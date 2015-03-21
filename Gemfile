@@ -7,6 +7,7 @@ gem 'rails-api'
 
 gem 'spring', :group => :development
 gem 'pry-rails', :group => :development
+gem 'pry-byebug'
 
 
 gem 'pg'

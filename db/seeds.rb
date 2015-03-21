@@ -6,26 +6,40 @@
 #   cities = City.create([{ name: 'Chicago' }, { name: 'Copenhagen' }])
 #   Mayor.create(name: 'Emanuel', city: cities.first)
 
-meter    = Unit.create(unit_name: 'meter', symbols: ['m'])
-second   = Unit.create(unit_name: 'second', symbols: ['s'])
-kilogram = Unit.create(unit_name: 'kilogram', symbols: ['kg'])
-ampere   = Unit.create(unit_name: 'ampere', symbols: ['Ω'])
-candela  = Unit.create(unit_name: 'candela', symbols: ['cd'])
-kelvin   = Unit.create(unit_name: 'kelvin', symbols: ['K'])
-mole     = Unit.create(unit_name: 'mole', symbols: ['mol'])
+def create_base_unit(unit_name, symbols)
+  unit = Unit.create(unit_name: unit_name, symbols: symbols)
+  unit.conversion_factor = ConversionFactor.new()
+  unit.conversion_factor.unit = [Unit::CUnit.new(unit, 1)]
+  unit.conversion_factor.save
+  unit.save
+end
 
-meter.conversion_factor    = ConversionFactor.create(compound_unit: [Unit::CUnit.new(meter, 1)])
-second.conversion_factor   = ConversionFactor.create(compound_unit: [Unit::CUnit.new(second, 1)])
-kilogram.conversion_factor = ConversionFactor.create(compound_unit: [Unit::CUnit.new(kilogram, 1)])
-ampere.conversion_factor   = ConversionFactor.create(compound_unit: [Unit::CUnit.new(ampere, 1)])
-candela.conversion_factor  = ConversionFactor.create(compound_unit: [Unit::CUnit.new(candela, 1)])
-kelvin.conversion_factor   = ConversionFactor.create(compound_unit: [Unit::CUnit.new(kelvin, 1)])
-mole.conversion_factor     = ConversionFactor.create(compound_unit: [Unit::CUnit.new(mole, 1)])
+create_base_unit('meter', ['m'])
+create_base_unit('second', ['s'])
+create_base_unit('kilogram', ['kg'])
+create_base_unit('ampere', ['Ω'])
+create_base_unit('candela', ['cd'])
+create_base_unit('kelvin', ['K'])
+create_base_unit('mole', ['mol'])
+create_base_unit('radian', ['rad'])
 
-meter.save
-second.save
-kilogram.save
-ampere.save
-candela.save
-kelvin.save
-mole.save
+def create_derived_unit(unit_name, symbols, cf)
+  unit = Unit.create(unit_name: unit_name, symbols: symbols)
+  unit.conversion_factor = cf
+  unit.save
+end
+
+meter = Unit.find_by unit_name: 'meter'
+meter_cu = [Unit::CUnit.new(meter, 1)]
+second = Unit.find_by unit_name: 'second'
+second_cu = [Unit::CUnit.new(second, 1)]
+kilogram = Unit.find_by unit_name: 'kilogram'
+kilogram_cu = [Unit::CUnit.new(kilogram, 1)]
+
+minute_cf = ConversionFactor.new(multiplication_factor: Rational(60))
+minute_cf.unit = second_cu
+minute_cf.save
+
+minute = Unit.create(unit_name: 'minute', symbols: ['min'])
+minute.conversion_factor = minute_cf
+minute.save
