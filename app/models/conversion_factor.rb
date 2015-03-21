@@ -12,7 +12,7 @@ class ConversionFactor < ActiveRecord::Base
 
   def exponentiate (exponent)
     # apply the exponent to the multiplication factor
-    mf = Rational(multiplication_factor)
+    mf = multiplication_factor
     self.multiplication_factor = mf ** exponent
 
     # apply the exponent to each of the new units
@@ -40,8 +40,8 @@ class ConversionFactor < ActiveRecord::Base
     cu1 = unit
     cu2 = factor2.unit
     cu = Unit.simplify(cu1 + cu2)
-    mf = Rational(multiplication_factor) * Rational(factor2.multiplication_factor)
-    ls = Rational(linear_shift) + Rational(factor2.linear_shift)
+    mf = multiplication_factor * factor2.multiplication_factor
+    ls = linear_shift + factor2.linear_shift
 
     new_factor = ConversionFactor.new(
       multiplication_factor: mf,
@@ -52,9 +52,9 @@ class ConversionFactor < ActiveRecord::Base
     return new_factor
   end
 
-  # convert :: Rational -> Rational
+  # convert :: Float -> Float
   def convert (input_value)
-    Rational(input_value) * Rational(multiplication_factor) + Rational(linear_shift)
+    input_value.to_f * multiplication_factor + linear_shift
   end
 
 end

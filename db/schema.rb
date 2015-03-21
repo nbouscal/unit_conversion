@@ -18,8 +18,8 @@ ActiveRecord::Schema.define(version: 20150319192233) do
 
   create_table "conversion_factors", force: :cascade do |t|
     t.binary   "compound_unit"
-    t.text     "multiplication_factor", default: "1"
-    t.text     "linear_shift",          default: "0"
+    t.float    "multiplication_factor", default: 1.0
+    t.float    "linear_shift",          default: 0.0
     t.integer  "unit_id"
     t.datetime "created_at",                          null: false
     t.datetime "updated_at",                          null: false

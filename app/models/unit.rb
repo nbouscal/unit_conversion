@@ -20,32 +20,32 @@ class Unit < ActiveRecord::Base
     # type CompoundUnit = [CUnit]
     #
     # data Quantity = Quantity {
-    #     amount :: Rational
+    #     amount :: Float
     #   , compound_unit :: CompoundUnit
     #   }
     #
     # data ConversionFactor = ConversionFactor {
     #     compound_unit :: CompoundUnit
     #       ^-- should contain inverse of the original unit???
-    #   , multiplication_factor :: Rational
-    #   , linear_shift :: Rational
+    #   , multiplication_factor :: Float
+    #   , linear_shift :: Float
     #   }
 
     # data Output = Output {
     #     unit_name :: String
-    #   , multiplication_factor :: Rational
-    #   , linear_shift :: Rational
+    #   , multiplication_factor :: Float
+    #   , linear_shift :: Float
     #   , output_value :: OutputValue
     #   }
     #
     # data InputValue
-    #   = InputScalar Rational -- Numeric
-    #   | InputVector [Rational] -- Array
+    #   = InputScalar Float -- Numeric
+    #   | InputVector [Float] -- Array
     #   | NoInputValue -- nil
     #
     # data OutputValue
-    #   = OutputScalar Rational -- Numeric
-    #   | OutputVector [Rational] -- Array
+    #   = OutputScalar Float -- Numeric
+    #   | OutputVector [Float] -- Array
     #   | NoOutputValue -- nil
     #
     # Unit.to_SI :: (String, InputValue) -> Output
