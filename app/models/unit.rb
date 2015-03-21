@@ -167,11 +167,7 @@ class Unit < ActiveRecord::Base
       end
 
       simplified_unit.map! do |u|
-        if u.exponent == 0
-          nil
-        else
-          u
-        end
+        u.exponent == 0 ? nil : u
       end.compact!
 
       return simplified_unit
@@ -179,17 +175,31 @@ class Unit < ActiveRecord::Base
 
     # Unit.print_unit :: CompoundUnit -> String
     def print_unit(compound_unit)
-      compound_unit.reduce('') do |memo, obj|
-        unit = obj.unit.symbols.first
-        exp = obj.exponent
-        if exp != 1
-          unit = unit + '^' + exp.to_s
+      num = compound_unit.select { |u| u.exponent > 0 }
+      den = compound_unit.select { |u| u.exponent < 0 }
+
+      def aux (cu)
+        cu.reduce('') do |memo, obj|
+          unit = obj.unit.symbols.first
+          exp = obj.exponent
+          if exp != 1
+            unit = unit + '^' + exp.to_s
+          end
+          if memo == ''
+            unit
+          else
+            memo + ' * ' + unit
+          end
         end
-        if memo == ''
-          unit
-        else
-          memo + ' * ' + unit
-        end
+      end
+
+      if den == []
+        aux(num)
+      elsif num == []
+        aux(den)
+      else
+        den = den.map { |u| u.exponent *= -1; u }
+        aux(num) + '/' + aux(den)
       end
     end
 
