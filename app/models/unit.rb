@@ -7,47 +7,6 @@ class Unit < ActiveRecord::Base
 
   class << self
 
-    # data SimpleUnit = SimpleUnit {
-    #     unit_name :: String
-    #   , symbols :: [String]
-    #   , to_SI :: ConversionFactor
-    #   }
-    #
-    # data CUnit = CUnit {
-    #     unit :: Unit
-    #   , exponent :: Fixnum
-    #   }
-    # type CompoundUnit = [CUnit]
-    #
-    # data Quantity = Quantity {
-    #     amount :: Float
-    #   , compound_unit :: CompoundUnit
-    #   }
-    #
-    # data ConversionFactor = ConversionFactor {
-    #     compound_unit :: CompoundUnit
-    #       ^-- should contain inverse of the original unit???
-    #   , multiplication_factor :: Float
-    #   , linear_shift :: Float
-    #   }
-
-    # data Output = Output {
-    #     unit_name :: String
-    #   , multiplication_factor :: Float
-    #   , linear_shift :: Float
-    #   , output_value :: OutputValue
-    #   }
-    #
-    # data InputValue
-    #   = InputScalar Float -- Numeric
-    #   | InputVector [Float] -- Array
-    #   | NoInputValue -- nil
-    #
-    # data OutputValue
-    #   = OutputScalar Float -- Numeric
-    #   | OutputVector [Float] -- Array
-    #   | NoOutputValue -- nil
-    #
     # Unit.to_SI :: (String, InputValue) -> Output
     def to_SI(input_unit_name, input_value = nil)
 
@@ -83,10 +42,6 @@ class Unit < ActiveRecord::Base
 
     end
 
-    def test
-      print_unit(parse_unit('meters * kg/second * s'))
-    end
-
     # Unit.parse_unit :: String -> CompoundUnit
     def parse_unit(unit_name)
       tokens = tokenize(unit_name)
@@ -112,10 +67,11 @@ class Unit < ActiveRecord::Base
     def parse(tokens)
       tokens.delete_if { |t| t == '*' } # multiplication is the default
       tokens.map! do |token|
-        # singularize, but make sure not to replace seconds with nil
+        # singularize, but make sure not to replace seconds with ''
         token == 's' ? token : token.singularize
       end
 
+      # only supports one instance of division
       division = tokens.index('/')
       tokens.delete('/')
 
@@ -157,12 +113,8 @@ class Unit < ActiveRecord::Base
 
       compound_unit.each do |u|
         last = simplified_unit.last
-        unless last.nil?
-          if last.unit == u.unit
+        if !last.nil? && last.unit == u.unit
             last.exponent += u.exponent
-          else
-            simplified_unit << u.dup
-          end
         else
           simplified_unit << u.dup
         end
@@ -176,6 +128,9 @@ class Unit < ActiveRecord::Base
     end
 
     # Unit.print_unit :: CompoundUnit -> String
+    # Print out the unit name, preferring to use negative exponents if there
+    # is no numerator, but a division sign if there is a numerator and a
+    # denominator.
     def print_unit(compound_unit)
       num = compound_unit.select { |u| u.exponent > 0 }
       den = compound_unit.select { |u| u.exponent < 0 }
